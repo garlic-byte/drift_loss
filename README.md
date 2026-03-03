@@ -5,13 +5,13 @@ This repository reproduces the **Drift Loss** proposed in the paper "Generative 
 ## Results
 <table>
   <tr>
-    <td align="center"><img src="outputs/plots/epoch_5000.png" width="500"></td>
+    <td align="center"><img src="outputs/drift/plots/epoch_5000.png" width="500"></td>
   </tr>
   <tr>
     <td align="center">Generated MNIST Samples</td>
   </tr>
   <tr>
-    <td align="center"><img src="outputs/plots/loss.png" width="800"></td>
+    <td align="center"><img src="outputs/drift/plots/loss.png" width="800"></td>
   </tr>
   <tr>
     <td align="center">Training Loss Curve</td>
