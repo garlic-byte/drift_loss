@@ -8,13 +8,25 @@ This repository reproduces the **Drift Loss** proposed in the paper "Generative 
     <td align="center"><img src="outputs/drift/plots/epoch_5000.png" width="500"></td>
   </tr>
   <tr>
-    <td align="center">Generated MNIST Samples</td>
+    <td align="center">Generated MNIST Samples by vit and drift loss</td>
   </tr>
   <tr>
     <td align="center"><img src="outputs/drift/plots/loss.png" width="800"></td>
   </tr>
   <tr>
-    <td align="center">Training Loss Curve</td>
+    <td align="center">Training Loss Curve by vit and drift loss</td>
+  </tr>
+    <tr>
+    <td align="center"><img src="outputs/dit/plots/epoch_5000.png" width="500"></td>
+  </tr>
+  <tr>
+    <td align="center">Generated MNIST Samples by dit model</td>
+  </tr>
+  <tr>
+    <td align="center"><img src="outputs/dit/plots/loss.png" width="800"></td>
+  </tr>
+  <tr>
+    <td align="center">Training Loss Curve by dit model</td>
   </tr>
 </table>
 
