@@ -149,13 +149,7 @@ class DiTBlock(nn.Module):
         return x
 
 
-class DiT(nn.Module):
-    sqrt_alphas_cumprod: torch.Tensor # for training
-    sqrt_one_minus_alphas_cumprod: torch.Tensor # for training
-    sqrt_recip_alphas: torch.Tensor # for inferencing
-    posterior_variance: torch.Tensor # for inferencing
-    betas: torch.Tensor
-    alphas: torch.Tensor
+class FlowMatching(nn.Module):
     def __init__(
             self,
             img_size,
@@ -169,12 +163,13 @@ class DiT(nn.Module):
             num_classes=10,
             num_layers=6,
             device='cuda:0',
+            denoise_step=4,
     ):
         super().__init__()
         assert img_size % patch_size == 0
         self.device = device
+        self.denoise_step = denoise_step
         self.max_timesteps = max_timesteps
-        self.prepare_dit_params(beta_start, beta_end, max_timesteps)
 
         self.vis_emb = PatchEmbedding(
             in_channels=img_channels,
@@ -195,24 +190,6 @@ class DiT(nn.Module):
             img_size=img_size,
         )
 
-    def prepare_dit_params(self, beta_start, beta_end, timesteps):
-        """Prepare parameters for adding noise at training and inference time."""
-        # Parameters for adding noise at training
-        betas = torch.linspace(beta_start, beta_end, timesteps).to(self.device)
-        alphas = 1. - betas
-        alphas_cumprod = torch.cumprod(alphas, dim=0)
-        alphas_cumprod_prev = F.pad(alphas_cumprod[:-1], (1, 0), value=1.0)
-
-        # noised_img = sqrt(alpha_cumprod)*original_img + sqrt(1-alpha_cumprod)*noise
-        self.sqrt_alphas_cumprod = torch.sqrt(alphas_cumprod)
-        self.sqrt_one_minus_alphas_cumprod = torch.sqrt(1. - alphas_cumprod)
-
-        # Parameters for adding noise at inference
-        self.sqrt_recip_alphas = torch.sqrt(1.0 / alphas)
-        self.posterior_variance = betas * (1. - alphas_cumprod_prev) / (1. - alphas_cumprod)
-        self.betas = betas
-        self.alphas = alphas
-
     def step_denoise(self, noised_vision, timesteps, label):
         """Return predicted noise from (noise + vision, label)"""
         features = self.vis_emb(noised_vision) + self.pos_emb # [batch_size, seq_len, hidden_dim]
@@ -225,7 +202,7 @@ class DiT(nn.Module):
 
     def forward(self, noise, label, vision=None):
         """
-        Add noise and denoise using diffusion transformer.
+        Add noise and denoise using flow matching.
         :param noise: [batch_size, in_channels, height, width]
         :param label: [batch_size]
         :param vision: [batch_size, in_channels, height, width]
@@ -235,26 +212,22 @@ class DiT(nn.Module):
         if vision is not None:
             # train step
             batch_timesteps = torch.randint(0, self.max_timesteps, (b, )).to(self.device)
-            sqrt_alpha = self.sqrt_alphas_cumprod[batch_timesteps][:, None, None, None].to(self.device)
-            sqrt_one_minus_alpha = self.sqrt_one_minus_alphas_cumprod[batch_timesteps][:, None, None, None].to(self.device)
-            noised_vision = sqrt_alpha * vision + sqrt_one_minus_alpha * noise
+            version_ratio = (batch_timesteps / self.max_timesteps).reshape(-1, 1, 1, 1)
+            noised_vision = version_ratio * vision + (1 - version_ratio) * noise
+            velocity = vision - noise
 
-            predicted_noise = self.step_denoise(noised_vision, batch_timesteps, label)
-            loss = F.mse_loss(predicted_noise, noise)
+            predicted_velocity = self.step_denoise(noised_vision, batch_timesteps, label)
+            loss = F.mse_loss(predicted_velocity, velocity)
             return {'loss': loss}
 
         # infer step
-        vision = torch.randn(noise.shape).to(self.device)
-        for timestep in range(self.max_timesteps - 1, -1, -1):
+        noised_vision = torch.randn(noise.shape).to(self.device)
+        dt = 1 / self.denoise_step
+        for timestep in range(0, self.max_timesteps, self.max_timesteps // self.denoise_step):
             batch_timesteps = torch.full((b, ), timestep, device=self.device, dtype=torch.long)
-            model_output = self.step_denoise(vision, batch_timesteps, label)
+            pred_velocity = self.step_denoise(noised_vision, batch_timesteps, label)
 
-            vision = self.sqrt_recip_alphas[timestep] * (vision - self.betas[timestep]
-                     / self.sqrt_one_minus_alphas_cumprod[timestep] * model_output)
-            # add noise
-            if timestep > 0:
-                noise = torch.randn_like(vision)
-                vision = vision + torch.sqrt(self.posterior_variance[timestep]) * noise
-        return vision
+            noised_vision = noised_vision + dt * pred_velocity
+        return noised_vision
 
 

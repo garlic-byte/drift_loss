@@ -7,22 +7,42 @@ import torch
 from transformers import TrainingArguments, Trainer
 
 from data import MnistDataset, data_collator
-from model import VIT, DiT
+from model import ViT, DiT, FlowMatching
 from utils import DrawResults
 
-
 @dataclass
-class DitConfig:
+class FlowMatchingConfig:
+    model_name: str = "flow_matching"
     dataset_path: str = "/home/wsj/Desktop/data/dataset_origin/mnist"
-    output_dir: str = "outputs/dit"
+    output_dir: str = "outputs/flow_matching"
 
     img_size: int = 28
-    patch_size: int = 4
+    patch_size: int = 2
     num_classes: int = 10
     img_channels: int = 1
     hidden_dim: int = 256
     num_heads: int = 16
-    num_layers: int = 12
+    num_layers: int = 6
+
+    batch_size: int = 50
+    max_steps: int = 5000
+    learning_rate: float = 1e-3
+    save_steps = 1000
+
+
+@dataclass
+class DitConfig:
+    model_name: str = "dit"
+    dataset_path: str = "/home/wsj/Desktop/data/dataset_origin/mnist"
+    output_dir: str = "outputs/dit"
+
+    img_size: int = 28
+    patch_size: int = 2
+    num_classes: int = 10
+    img_channels: int = 1
+    hidden_dim: int = 256
+    num_heads: int = 16
+    num_layers: int = 6
 
     batch_size: int = 50
     max_steps: int = 5000
@@ -32,6 +52,7 @@ class DitConfig:
 
 @dataclass
 class DriftConfig:
+    model_name: str = "vit"
     dataset_path: str = "/home/wsj/Desktop/data/dataset_origin/mnist"
     output_dir: str = "outputs/drift"
 
@@ -56,15 +77,36 @@ def run_train(config: dataclass):
     np.random.seed(seed)
 
     dataset = MnistDataset(data_dir=config.dataset_path)
-    model = DiT(
-        img_size=config.img_size,
-        patch_size=config.patch_size,
-        num_classes=config.num_classes,
-        img_channels=config.img_channels,
-        hidden_dim=config.hidden_dim,
-        num_heads=config.num_heads,
-        num_layers=config.num_layers,
-    )
+    if config.model_name == "dit":
+        model = DiT(
+            img_size=config.img_size,
+            patch_size=config.patch_size,
+            num_classes=config.num_classes,
+            img_channels=config.img_channels,
+            hidden_dim=config.hidden_dim,
+            num_heads=config.num_heads,
+            num_layers=config.num_layers,
+        )
+    elif config.model_name == "vit":
+        model = ViT(
+            img_size=config.img_size,
+            patch_size=config.patch_size,
+            num_classes=config.num_classes,
+            img_channels=config.img_channels,
+            hidden_dim=config.hidden_dim,
+            num_heads=config.num_heads,
+            num_layers=config.num_layers,
+        )
+    else:
+        model = FlowMatching(
+            img_size=config.img_size,
+            patch_size=config.patch_size,
+            num_classes=config.num_classes,
+            img_channels=config.img_channels,
+            hidden_dim=config.hidden_dim,
+            num_heads=config.num_heads,
+            num_layers=config.num_layers,
+        )
     train_args = TrainingArguments(
         output_dir=config.output_dir,
         max_steps=config.max_steps,
@@ -116,5 +158,5 @@ def run_train(config: dataclass):
 
 
 if __name__ == "__main__":
-    cfg = DitConfig()
+    cfg = FlowMatchingConfig()
     run_train(cfg)

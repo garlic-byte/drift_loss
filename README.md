@@ -28,7 +28,20 @@ This repository reproduces the **Drift Loss** proposed in the paper "Generative 
   <tr>
     <td align="center">Training Loss Curve by dit model</td>
   </tr>
+  <tr>
+    <td align="center"><img src="outputs/flow_matching/plots/epoch_3000.png" width="500"></td>
+  </tr>
+  <tr>
+    <td align="center">Generated MNIST Samples by flow matching model</td>
+  </tr>
+  <tr>
+    <td align="center"><img src="outputs/flow_matching/plots/loss.png" width="800"></td>
+  </tr>
+  <tr>
+    <td align="center">Training Loss Curve by flow matching model</td>
+  </tr>
 </table>
+
 
 ## Overview
 

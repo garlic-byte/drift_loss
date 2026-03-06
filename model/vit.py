@@ -32,7 +32,7 @@ class DecoderEmbed(nn.Module):
         return x
 
 
-class VIT(nn.Module):
+class ViT(nn.Module):
     def __init__(
         self,
         img_size: int,
